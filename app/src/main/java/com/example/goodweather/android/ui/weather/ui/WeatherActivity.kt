@@ -1,9 +1,12 @@
 package com.example.goodweather.android.ui.weather.ui
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
@@ -14,10 +17,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.goodweather.android.R
 import com.example.goodweather.android.bindView
 import com.example.goodweather.android.logic.model.Weather
@@ -27,6 +33,10 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 class WeatherActivity : AppCompatActivity() {
+
+    lateinit var swipeRefresh : SwipeRefreshLayout
+    lateinit var navBtn : Button
+    lateinit var drawerLayout : DrawerLayout
 
     val viewModel by lazy {
         ViewModelProvider(this).get(WeatherViewModel::class.java)
@@ -41,6 +51,8 @@ class WeatherActivity : AppCompatActivity() {
         val locationLng = intent.getStringExtra("location_lng")
         val locationLat = intent.getStringExtra("location_lat")
         val placeName = intent.getStringExtra("location_name")
+
+        swipeRefresh = bindView<SwipeRefreshLayout>(R.id.swipeRefresh)
 
         Log.d("WeatherActivity", "Received Lng: $locationLng, Lat: $locationLat, Place Name: $placeName")
 //        if(viewModel.locationLng.isEmpty()){
@@ -71,8 +83,33 @@ class WeatherActivity : AppCompatActivity() {
                 Log.e("WeatherActivity", "获取天气信息失败", result.exceptionOrNull())
                 result.exceptionOrNull()?.printStackTrace()
             }
+            swipeRefresh.isRefreshing = false
         })
-        viewModel.refreshWeather(viewModel.locationLng,viewModel.locationLat)
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary)
+        refreshWeather()
+        swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+
+        navBtn = findViewById<Button>(R.id.navBtn)
+        drawerLayout = findViewById<DrawerLayout>(R.id.drawerLayout)
+        navBtn.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
+        drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerStateChanged(newState: Int) {}
+
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+
+            override fun onDrawerOpened(drawerView: View) {}
+
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE)
+                        as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken,
+                    InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+        })
     }
 
     private fun showWeatherInfo(weather: Weather){
@@ -131,6 +168,10 @@ class WeatherActivity : AppCompatActivity() {
 
 
 
+    }
+    fun refreshWeather(){
+        viewModel.refreshWeather(viewModel.locationLng,viewModel.locationLat)
+        swipeRefresh.isRefreshing = true
     }
 
 }
